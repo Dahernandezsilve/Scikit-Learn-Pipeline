@@ -37,6 +37,10 @@ jobs:
           name: dist
           path: dist/*
 
+        - name: Clean non-distribution files from dist
+          run: |
+            find dist -type f ! -name "*.whl" ! -name "*.tar.gz" -delete
+
       # Publica a TestPyPI solo si el push fue un tag que empieza con test-
       - name: Publish to TestPyPI (tags test-*)
         if: github.event_name == 'push' && startsWith(github.ref_name, 'test-')
