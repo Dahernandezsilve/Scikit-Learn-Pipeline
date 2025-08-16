@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 from pathlib import Path
 this_dir = Path(__file__).parent
 long_description = (this_dir / "README.md").read_text(encoding="utf-8")
-# testingss2
+# testingss2jsjs
 setup(
     name="titanic-ml-pipeline",
     version="0.1.0",
