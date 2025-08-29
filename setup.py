@@ -7,7 +7,7 @@ setup(
     name="titanic-ml-pipeline",
     version="0.1.2",
     description="Pipeline Titanic con scikit-learn (SVD + LogisticRegression)",
-    author="Tu Nombre",
+    author="Diego Hernandez",
     packages=find_packages(),
     python_requires=">=3.9",
     install_requires=[
