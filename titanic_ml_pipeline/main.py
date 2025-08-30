@@ -20,26 +20,30 @@ categoricalFeatures = ["sex", "embarked", "pclass"]
 targetCol = "survived"
 
 def main(modelPath: str = "titanic_pipeline.joblib", resultsCsv: str | None = "grid_results.csv"):
-    # 1) Cargar dataset (Titanic - seaborn)
     df = sns.load_dataset("titanic")
 
-    # 2) Seleccionar features/target
     X = df[numericFeatures + categoricalFeatures]
     y = df[targetCol]
 
-    # 3) Preprocesamiento
     numericPipeline = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler())
     ])
     categoricalPipeline = Pipeline([
         ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
-        ("onehot", OneHotEncoder(handle_unknown="ignore"))  # salida sparse
+        ("onehot", OneHotEncoder(handle_unknown="ignore"))  # salida sparse OK para SVD
     ])
     preprocess = ColumnTransformer([
         ("numerical", numericPipeline, numericFeatures),
         ("categorical", categoricalPipeline, categoricalFeatures),
     ])
+
+    XTrain, XTest, yTrain, yTest = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    Xt_sample = preprocess.fit_transform(XTrain)
+    n_features_out = Xt_sample.shape[1]
 
     mlPipeline = Pipeline([
         ("preprocessor", preprocess),
@@ -47,10 +51,15 @@ def main(modelPath: str = "titanic_pipeline.joblib", resultsCsv: str | None = "g
         ("clf", LogisticRegression(max_iter=10000, random_state=0))
     ])
 
+    candidate_svd = [5, 8, 10, 12, 15, 20, 30, 50]
+    svd_valid = [c for c in candidate_svd if c < n_features_out]
+    if not svd_valid:  # fallback defensivo
+        svd_valid = [max(2, n_features_out - 1)]
+
     paramGrid = {
-        "svd__n_components": [10, 20, 30, 50],
+        "svd__n_components": svd_valid,
         "clf__C": [0.01, 0.1, 1.0, 10.0],
-        "clf__solver": ["lbfgs", "newton-cg"],
+        "clf__solver": ["lbfgs", "newton-cg"],  
     }
 
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -65,10 +74,6 @@ def main(modelPath: str = "titanic_pipeline.joblib", resultsCsv: str | None = "g
         return_train_score=True,
     )
 
-    XTrain, XTest, yTrain, yTest = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
-
     grid.fit(XTrain, yTrain)
 
     print("Mejores hiperparámetros:", grid.best_params_)
@@ -80,11 +85,17 @@ def main(modelPath: str = "titanic_pipeline.joblib", resultsCsv: str | None = "g
     print("\nTop combinaciones por mean_test_score:")
     print(results[["mean_test_score", "std_test_score", "mean_train_score", "params"]].head(15))
 
+    if resultsCsv is not None:
+        results.to_csv(resultsCsv, index=False)
+        print(f"\nResultados completos guardados en: {resultsCsv}")
+
+    # 8) Evaluación en test con el mejor modelo
     bestModel = grid.best_estimator_
     yPred = bestModel.predict(XTest)
     acc = accuracy_score(yTest, yPred)
     print(f"Accuracy en test: {acc:.3f}")
 
+    # 9) Guardar el mejor modelo
     joblib.dump(bestModel, modelPath)
     print(f"Modelo (mejor estimador) guardado en {modelPath}")
 
