@@ -1,0 +1,13 @@
+.git
+.github
+dist
+*.ipynb
+__pycache__/
+*.egg-info/
+*.pickle
+*.joblib
+*.png
+*.pdf
+*.csv
+.env
+.DS_Store
